@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
@@ -55,15 +57,44 @@ class Trainer:
         self.num_epochs = num_epochs
 
     def fit(
-        self, model: LinearRegressionScratch, data_loader: torch.utils.data.DataLoader
-    ):
+        self,
+        model: LinearRegressionScratch,
+        data_loader: torch.utils.data.DataLoader,
+        data_loader_val: Optional[torch.utils.data.DataLoader],
+    ) -> dict:
         optimizer = self.optimizer_factory.with_params([model.w, model.b])
+        epoch_num = []
+        loss_train = []
+        loss_val = []
+
         for epoch in range(self.num_epochs):
+            epoch_num.append(epoch)
+
             model.train()  # Prepares the model for training
+            epoch_loss = 0
             for X_batch, y_batch in data_loader:
                 y_hat = model(X_batch)  # Short for model.forward(X_batch)
                 loss = model.loss(y_hat, y_batch)
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
+                epoch_loss += loss.item()
                 print([model.w, model.b])
+
+            print("Training loss:", epoch_loss)
+            loss_train.append(epoch_loss)
+
+            if data_loader_val is not None:
+                with torch.no_grad():
+                    model.eval()
+                    epoch_val_loss = 0
+
+                    for X_batch, y_batch in data_loader_val:
+                        y_hat = model(X_batch)
+                        loss = model.loss(y_hat, y_batch)
+                        epoch_val_loss += loss.item()
+
+                    print("Validation loss:", epoch_val_loss)
+                    loss_val.append(epoch_val_loss)
+
+        return {"epoch_num": epoch_num, "loss": loss_train, "loss_val": loss_val}

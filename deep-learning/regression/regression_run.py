@@ -20,8 +20,12 @@ num_val = 100
 
 n = num_train + num_val
 X = torch.randn(n, len(w))
-noise = torch.randn(n, 1) * noise
-y = torch.matmul(X, w.reshape((-1, 1))) + b + noise
+noise_tensor = torch.randn(n, 1) * noise
+y = torch.matmul(X, w.reshape((-1, 1))) + b + noise_tensor
+
+X_val = torch.randn(n, len(w))
+noise_val = torch.randn(n, 1) * noise
+y_val = torch.matmul(X_val, w.reshape((-1, 1))) + b + noise_val
 
 # Initialize estimates randomly.
 w_est = torch.randn(len(w), 1, requires_grad=True)
@@ -36,11 +40,14 @@ batch_size = 32
 # Prepare data splits.
 dataset = TensorDataset(X, y)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+data_loader_val = DataLoader(
+    TensorDataset(X_val, y_val), batch_size=batch_size, shuffle=True
+)
 
 lr_model = LinearRegressionScratch(num_inputs=2, sigma=1)
 trainer = Trainer(num_epochs=100)
-trainer.fit(lr_model, data_loader)
-
+loss_data = trainer.fit(lr_model, data_loader, data_loader_val)
+print(loss_data)
 
 print(lr_model.w)
 print(lr_model.b)
