@@ -24,11 +24,12 @@ class SyntheticRegressionData(DataModule):
         else:
             indices = list(range(self.num_train, self.num_train + self.num_val))
         for i in range(0, len(indices), self.batch_size):
-            batch_indices = torch.tensor(indices[i: i + self.batch_size])
+            batch_indices = torch.tensor(indices[i : i + self.batch_size])
             yield self.X[batch_indices], self.y[batch_indices]
+
 
 data = SyntheticRegressionData(w=torch.tensor([2, -3.4]), b=4.2)
 # aa.X
 # aa.y
 X, y = next(iter(data.train_dataloader()))
-print('X shape:', X.shape, '\ny shape:', y.shape)
+print("X shape:", X.shape, "\ny shape:", y.shape)

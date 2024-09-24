@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.linear_model import LinearRegression
 
+from regression.my_model_from_scratch_class import LinearRegressionScratch, Trainer
+
 torch.manual_seed(0)
 
 # Data parameters. Since this is a simple linear model the optimization should
@@ -34,30 +36,29 @@ batch_size = 32
 # Prepare data splits.
 dataset = TensorDataset(X, y)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-# Shuffle=True shuffles at each epoch. I assume that the data is shuffled each time the
-# for _ in data_loader is called.
 
-for epoch in range(num_epochs):
-    for X_batch, y_batch in data_loader:
-        batch_loss = (y_batch - torch.mm(X_batch, w_est) - b_est).pow(2).sum()
-        batch_loss.backward()  # Compute gradients for all parameters that have requires_grad=True.
+lr_model = LinearRegressionScratch(num_inputs=2, sigma=1)
+trainer = Trainer(num_epochs=100)
+trainer.fit(lr_model, data_loader)
 
-        with torch.no_grad():  # Disable gradient tracking.
-            w_est -= (lr / batch_size) * w_est.grad
-            b_est -= (lr / batch_size) * b_est.grad
 
-        w_est.grad.zero_()
-        b_est.grad.zero_()
+print(lr_model.w)
+print(lr_model.b)
 
-        print(w_est)
-        print(b_est)
-
-# Compare the estimated values with the true values.
 reg = LinearRegression().fit(X.numpy(), y.numpy())
 print(reg.coef_)
 print(reg.intercept_)
-print(b_est)
-print(w_est)
+print(lr_model.w)
+print(lr_model.b)
 
-torch.isclose(torch.tensor(reg.coef_[0]), torch.transpose(w_est, 0, 1), atol=0.1).all()
-torch.isclose(torch.tensor(reg.intercept_), b_est, atol=0.1).all()
+
+# This should also work. So we train the model with a 1-epoch trainer but 100 times.
+# Which should be equivalent to the previous code.
+lr_model2 = LinearRegressionScratch(num_inputs=2, sigma=1)
+
+for i in range(100):
+    trainer = Trainer(num_epochs=1)
+    trainer.fit(lr_model2, data_loader)
+
+print(lr_model2.w)  # Ok
+print(lr_model2.b)  # Ok
