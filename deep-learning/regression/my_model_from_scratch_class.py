@@ -1,10 +1,26 @@
+from abc import ABCMeta, abstractmethod
 from typing import Optional
 
 import torch
 import torch.nn as nn
+from torch.optim import SGD
 
 
-class LinearRegressionScratch(nn.Module):
+class AbstractModel(nn.Module, metaclass=ABCMeta):
+    @abstractmethod
+    def forward(self, X: torch.tensor) -> torch.tensor:
+        raise NotImplementedError("Method call on an abstract class.")
+
+    @abstractmethod
+    def loss(self, y_hat: torch.tensor, y: torch.tensor) -> torch.tensor:
+        raise NotImplementedError("Method call on an abstract class.")
+
+    @abstractmethod
+    def get_params(self) -> list[torch.tensor]:
+        raise NotImplementedError("Method call on an abstract class.")
+
+
+class LinearRegressionScratch(AbstractModel):
     """The linear regression model implemented from scratch."""
 
     def __init__(self, num_inputs: int, sigma: float = 0.01):
@@ -19,6 +35,30 @@ class LinearRegressionScratch(nn.Module):
 
     def loss(self, y_hat: torch.tensor, y: torch.tensor) -> torch.tensor:
         return (y - y_hat).pow(2).mean()
+
+    def get_params(self) -> list[torch.tensor]:
+        return [self.w, self.b]
+
+
+class LinearRegressionConcise(AbstractModel):
+    """The linear regression model implemented with PyTorch's nn.Module."""
+
+    def __init__(self):
+        super().__init__()
+        self.net = nn.LazyLinear(1)  # Output of size 1, undefined input size.
+        self.net.weight.data.normal_(0, 0.01)
+        self.net.bias.data.fill_(0)
+
+    def forward(self, X: torch.tensor) -> torch.tensor:
+        return self.net(X)
+
+    def loss(self, y_hat: torch.tensor, y: torch.tensor) -> torch.tensor:
+        fn = nn.MSELoss()
+        return fn(y_hat, y)
+
+    def get_params(self) -> list[torch.tensor]:
+        return list(self.parameters())
+
 
 
 class SGDOptimizer:
@@ -38,11 +78,15 @@ class SGDOptimizer:
 
 
 class SGDOptimizerFactory:
-    def __init__(self, lr: float):
+    def __init__(self, lr: float, type: int = 0):
         self.lr = lr
+        self.type = type
 
-    def with_params(self, params: list[torch.tensor]) -> SGDOptimizer:
-        return SGDOptimizer(params, self.lr)
+    def with_params(self, params: list[torch.tensor]) -> SGDOptimizer | SGD:
+        if self.type == 0:
+            return SGDOptimizer(params, self.lr)
+        elif self.type == 1:
+            return torch.optim.SGD(params, self.lr)
 
 
 # So we have an instance of a model, and then we can train it with different trainers.
@@ -58,11 +102,11 @@ class Trainer:
 
     def fit(
         self,
-        model: LinearRegressionScratch,
+        model: AbstractModel,
         data_loader: torch.utils.data.DataLoader,
         data_loader_val: Optional[torch.utils.data.DataLoader],
     ) -> dict:
-        optimizer = self.optimizer_factory.with_params([model.w, model.b])
+        optimizer = self.optimizer_factory.with_params(model.get_params())
         epoch_num = []
         loss_train = []
         loss_val = []
@@ -79,7 +123,8 @@ class Trainer:
                 optimizer.step()
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
-                print([model.w, model.b])
+                print(model.get_params())
+                # print([model.w, model.b])
 
             print("Training loss:", epoch_loss)
             loss_train.append(epoch_loss)

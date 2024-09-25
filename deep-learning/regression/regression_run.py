@@ -2,7 +2,8 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.linear_model import LinearRegression
 
-from regression.my_model_from_scratch_class import LinearRegressionScratch, Trainer
+from regression.my_model_from_scratch_class import LinearRegressionScratch, Trainer, LinearRegressionConcise, \
+    SGDOptimizerFactory
 
 torch.manual_seed(0)
 
@@ -58,14 +59,26 @@ print(reg.intercept_)
 print(lr_model.w)
 print(lr_model.b)
 
-
+########################################################################################
 # This should also work. So we train the model with a 1-epoch trainer but 100 times.
 # Which should be equivalent to the previous code.
+########################################################################################
 lr_model2 = LinearRegressionScratch(num_inputs=2, sigma=1)
 
 for i in range(100):
     trainer = Trainer(num_epochs=1)
-    trainer.fit(lr_model2, data_loader)
+    trainer.fit(lr_model2, data_loader, data_loader_val)
 
 print(lr_model2.w)  # Ok
 print(lr_model2.b)  # Ok
+
+
+########################################################################################
+# Concise.
+########################################################################################
+lr_model = LinearRegressionConcise()
+trainer = Trainer(num_epochs=100, optimizer_factory=SGDOptimizerFactory(lr=0.03, type=1))
+# trainer = Trainer(num_epochs=100)  # Also works.
+
+loss_data = trainer.fit(lr_model, data_loader, data_loader_val)
+print(loss_data)
